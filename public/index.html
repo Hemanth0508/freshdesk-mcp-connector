@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Freshdesk MCP Connector: live tests</title>
+<style>
+:root{--bg:#0b0f19;--card:#111827;--line:#1f2937;--txt:#e5e7eb;--mut:#94a3b8;--ok:#34d399;--bad:#f87171;--warn:#fbbf24;--ac:#6366f1}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--txt);font:14px/1.5 Inter,system-ui,sans-serif}
+main{max-width:920px;margin:0 auto;padding:20px}h1{font-size:20px;margin:0 0 4px}.mut{color:var(--mut);font-size:13px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin:14px 0}
+button{background:var(--ac);color:#fff;border:0;border-radius:9px;padding:8px 14px;font-weight:600;cursor:pointer}button:disabled{opacity:.5}
+input,select{background:#0f172a;color:var(--txt);border:1px solid #334155;border-radius:8px;padding:7px 9px;font:inherit;width:100%}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.row input[type=text],.row input[type=password]{flex:1 1 200px;width:auto}
+.t{display:flex;gap:10px;padding:5px 0;border-bottom:1px solid var(--line);font:12px ui-monospace,monospace}
+.b{min-width:44px;text-align:center;font-weight:700}.pass{color:var(--ok)}.fail{color:var(--bad)}.skip{color:var(--warn)}
+pre{background:#020617;border:1px solid var(--line);border-radius:10px;padding:12px;overflow:auto;max-height:380px;font-size:12px}
+.tabs button{background:none;color:var(--mut)}.tabs button.on{background:#1f2937;color:#fff}
+#form{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin:10px 0}
+</style></head><body><main>
+<h1>Freshdesk MCP Connector</h1>
+<div class="mut">Read-only connector for an Agent Studio-style agent. Everything below runs on the server for real: no canned results.</div>
+
+<div class="card"><b>Connection</b>
+  <div class="row" style="margin-top:8px">
+    <label><input type="radio" name="m" id="demo" checked> Shared demo account (server-side key, synthetic data)</label>
+    <label><input type="radio" name="m" id="own"> Use my own Freshdesk trial</label>
+  </div>
+  <div class="row" id="ownf" hidden style="margin-top:8px">
+    <input type="text" id="dom" placeholder="subdomain, e.g. acme" autocomplete="off">
+    <input type="password" id="key" placeholder="API key" autocomplete="off">
+  </div>
+  <p class="mut" style="margin:8px 0 0">A key you enter is sent over HTTPS with each request, used for that call, and not stored or logged. It lives only in this tab's memory.</p>
+</div>
+
+<div class="tabs row"><button id="tt" class="on">Tests</button><button id="tl">Tool runner</button></div>
+
+<div id="pt">
+  <div class="card"><div class="row"><b>1. Unit tests (mocked Freshdesk)</b><button id="bu">Run unit tests</button></div>
+    <div class="mut">Runs the repo's pytest suite on the server. Freshdesk is mocked, so this proves the connector's logic: auth header, list/get/search, 404, 429 + Retry-After, 5xx, timeouts, MCP tool calls. It does not prove Freshdesk itself works.</div><div id="ru"></div></div>
+  <div class="card"><div class="row"><b>2. Live smoke tests (real Freshdesk)</b><button id="bs">Run live tests</button></div>
+    <div class="mut">About 9 read-only calls against the account selected above: auth, list, get, search, contacts, a real 404, an invalid query.</div><div id="rs"></div></div>
+</div>
+
+<div id="pl" hidden><div class="card">
+  <div class="row"><b>Call an MCP tool</b><select id="tool" style="width:auto"></select></div>
+  <div class="mut" id="desc" style="margin-top:6px;white-space:pre-line"></div><div id="form"></div>
+  <button id="br">Run tool</button><pre id="out" style="margin-top:10px">Result appears here.</pre>
+  <div class="mut">Tool list and input schemas come straight from the MCP server; calls go through its real tool layer.</div>
+</div></div>
+
+<script>
+const $=s=>document.querySelector(s),esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const creds=()=>$('#own').checked?{domain:$('#dom').value.trim(),key:$('#key').value.trim()}:{};
+async function call(action,extra={}){try{const r=await fetch('/api/run',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({action,...creds(),...extra})});return await r.json()}catch(e){return{ok:false,error:'Request failed: '+e.message}}}
+function show(el,res){if(!res.ok){el.innerHTML=`<div class="fail" style="margin-top:8px">${esc(res.error)}</div>`;return}
+ const n=o=>res.tests.filter(r=>r.outcome===o).length;
+ el.innerHTML=`<div style="margin:10px 0"><b class="pass">${n('pass')} passed</b> · <span class="fail">${n('fail')} failed</span> · <span class="skip">${n('skip')} skipped</span>${res.ms?` · ${res.ms} ms`:''}</div>`+
+ res.tests.map(r=>`<div class="t"><span class="b ${r.outcome}">${r.outcome.toUpperCase()}</span><span style="flex:1;word-break:break-all">${esc(r.id)}${r.detail?`<div class="mut">${esc(r.detail)}</div>`:''}</span><span class="mut">${r.ms}ms</span></div>`).join('')}
+async function run(btn,out,action,label){btn.disabled=true;btn.textContent='Running...';out.innerHTML='';show(out,await call(action));btn.disabled=false;btn.textContent=label}
+$('#bu').onclick=()=>run($('#bu'),$('#ru'),'unit','Run unit tests');$('#bs').onclick=()=>run($('#bs'),$('#rs'),'smoke','Run live tests');
+const mode=()=>{$('#ownf').hidden=!$('#own').checked};$('#demo').onchange=$('#own').onchange=mode;
+$('#tt').onclick=()=>{$('#pt').hidden=false;$('#pl').hidden=true;$('#tt').className='on';$('#tl').className=''};
+$('#tl').onclick=()=>{$('#pt').hidden=true;$('#pl').hidden=false;$('#tl').className='on';$('#tt').className=''};
+let TOOLS=[];const base=p=>p.type||(p.anyOf||[]).map(x=>x.type).find(t=>t&&t!=='null');
+function form(){const t=TOOLS.find(x=>x.name===$('#tool').value);if(!t)return;$('#desc').textContent=t.description||'';const req=t.inputSchema.required||[];
+ $('#form').innerHTML=Object.entries(t.inputSchema.properties||{}).map(([k,p])=>{const ty=base(p),d=p.default;
+  return `<label class="mut">${esc(k)}${ty==='boolean'?`<input type="checkbox" data-k="${k}" data-t="boolean" style="width:auto;display:block">`:`<input data-k="${k}" data-t="${ty}" ${ty==='integer'?'type="number"':''} placeholder="${esc(ty+(req.includes(k)?' (required)':''))}" value="${d!=null?esc(d):''}">`}</label>`}).join('')}
+$('#tool').onchange=form;
+$('#br').onclick=async()=>{const args={};document.querySelectorAll('#form [data-k]').forEach(i=>{const t=i.dataset.t;if(t==='boolean'){if(i.checked)args[i.dataset.k]=true}else if(i.value!=='')args[i.dataset.k]=t==='integer'?Number(i.value):i.value});
+ $('#br').disabled=true;$('#out').textContent='Running...';const r=await call('tool',{tool:$('#tool').value,args});
+ $('#out').textContent=r.ok?JSON.stringify(r.result,null,2):'ERROR: '+r.error;$('#br').disabled=false};
+(async()=>{const c=await call('config');if(!c.demo){$('#demo').disabled=true;$('#own').checked=true;mode()}
+ const t=await call('tools');TOOLS=t.tools||[];$('#tool').innerHTML=TOOLS.map(x=>`<option>${esc(x.name)}</option>`).join('');form()})();
+</script></main></body></html>

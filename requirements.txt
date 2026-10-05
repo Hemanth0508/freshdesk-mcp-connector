@@ -1,0 +1,5 @@
+# Used by Vercel for the live demo (the test suite runs on the server, so pytest/respx are needed)
+httpx>=0.27
+mcp>=1.9,<2
+pytest>=8
+respx>=0.21

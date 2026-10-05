@@ -1,0 +1,1 @@
+{ "functions": { "api/run.py": { "includeFiles": "{freshdesk_mcp,tests}/**", "maxDuration": 30 } } }

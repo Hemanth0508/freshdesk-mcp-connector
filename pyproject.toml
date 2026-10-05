@@ -1,0 +1,22 @@
+[project]
+name = "freshdesk-mcp-connector"
+version = "0.1.0"
+description = "Private, read-only Freshdesk connector exposed as MCP tools for an Agent Studio-style agent"
+requires-python = ">=3.10"
+dependencies = ["httpx>=0.27", "mcp>=1.9,<2"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "respx>=0.21"]
+
+[project.scripts]
+freshdesk-mcp = "freshdesk_mcp.server:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["freshdesk_mcp"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
