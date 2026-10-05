@@ -1,6 +1,6 @@
 # Freshdesk MCP Connector (read-only)
 
-A small private connector that lets an Agent Studio-style agent **read** support data from Freshdesk through MCP tools. Built for Razorpay Forward-Deployed Engineer Assignment 3.
+A small private connector that lets an Agent Studio-style agent **read** support data from Freshdesk through MCP tools. 
 
 Deployed domain: https://freshdesk-mcp-connector-chi.vercel.app/
 
