@@ -2,6 +2,8 @@
 
 A small private connector that lets an Agent Studio-style agent **read** support data from Freshdesk through MCP tools. Built for Razorpay Forward-Deployed Engineer Assignment 3.
 
+Deployed domain: https://freshdesk-mcp-connector-chi.vercel.app/
+
 ## 1. What it does
 Authenticates to Freshdesk with an API key and exposes six read-only MCP tools: list/get/search for tickets, and list/get/search for contacts. It handles HTTP 429 (honoring `Retry-After`), auth errors, not-found, timeouts and 5xx failures, and returns errors an agent can act on. It issues `GET` requests only.
 
